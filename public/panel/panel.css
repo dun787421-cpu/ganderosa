@@ -180,6 +180,14 @@ a {
   font-weight: 700;
 }
 
+#hubStatus.is-ok {
+  color: #7dffa3;
+}
+
+#hubStatus.is-off {
+  color: #ffb4b4;
+}
+
 .toolbar__meta {
   color: #cfcfcf;
   font-size: 0.88rem;

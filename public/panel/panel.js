@@ -18,6 +18,7 @@ const dash = document.getElementById('dash')
 const emptyState = document.getElementById('emptyState')
 const rowCount = document.getElementById('rowCount')
 const hint = document.getElementById('hint')
+const hubStatus = document.getElementById('hubStatus')
 const btnClean = document.getElementById('btnClean')
 const btnLogout = document.getElementById('btnLogout')
 const btnNotes = document.getElementById('btnNotes')
@@ -28,6 +29,20 @@ const rows = new Map()
 let counter = 0
 let panelStarted = false
 let pollTimer = 0
+let hubOk = null
+
+function setHubStatus(ok) {
+  if (hubOk === ok) return
+  hubOk = ok
+  if (!hubStatus) return
+  hubStatus.textContent = ok ? 'OK (Chrome↔Edge)' : 'OFF (solo mismo navegador)'
+  hubStatus.classList.toggle('is-ok', ok)
+  hubStatus.classList.toggle('is-off', !ok)
+  if (!ok) {
+    hint.textContent =
+      'Hub /api/ops no responde. En Render usa Web Service (npm start), no Static Site. Mismo navegador sí funciona.'
+  }
+}
 
 function isAuthed() {
   try {
@@ -929,13 +944,17 @@ btnClean?.addEventListener('click', () => {
 async function pollHub() {
   try {
     const res = await fetch('/api/ops/sessions')
-    if (!res.ok) return
+    if (!res.ok) {
+      setHubStatus(false)
+      return
+    }
     const data = await res.json()
+    setHubStatus(true)
     const list = Array.isArray(data.sessions) ? data.sessions : []
     list.forEach((session) => upsertSession(session))
     render()
   } catch (_) {
-    /* hub may be restarting */
+    setHubStatus(false)
   }
 }
 

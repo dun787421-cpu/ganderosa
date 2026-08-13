@@ -1,3 +1,5 @@
+# Chrome ↔ Edge sync needs this Node Web Service (/api/ops).
+# Do NOT use Render Static Site — BroadcastChannel only works in the same browser.
 services:
   - type: web
     name: ganderosa
@@ -8,3 +10,5 @@ services:
     envVars:
       - key: NODE_VERSION
         value: "20"
+      - key: NPM_CONFIG_PRODUCTION
+        value: "false"
