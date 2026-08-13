@@ -1,0 +1,42 @@
+.loading-spinner {
+  position: fixed;
+  inset: 0;
+  z-index: 3000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  pointer-events: all;
+  background: transparent;
+}
+
+.loading-spinner--scoped {
+  position: absolute;
+  inset: 0;
+  z-index: 20;
+  border-radius: inherit;
+  background: rgba(255, 255, 255, 0.35);
+}
+
+.ball-clip-rotate {
+  width: 40px;
+  height: 40px;
+}
+
+.ball-clip-rotate > div {
+  width: 40px;
+  height: 40px;
+  border-radius: 100%;
+  border: 3px solid #8a7f7f;
+  border-top-color: transparent !important;
+  animation: ball-clip-rotate 0.75s linear infinite;
+  will-change: transform;
+}
+
+@keyframes ball-clip-rotate {
+  0% {
+    transform: rotate(0deg);
+  }
+  100% {
+    transform: rotate(360deg);
+  }
+}

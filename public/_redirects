@@ -1,0 +1,4 @@
+# Render / Netlify: rutas del panel y SPA
+/panel   /panel/   301
+/panel/  /panel/index.html   200
+/        /index.html         200

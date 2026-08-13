@@ -1,0 +1,33 @@
+# Namecheap / Apache / LiteSpeed
+
+<IfModule mod_mime.c>
+  AddType application/javascript .js .mjs
+  AddType text/css .css
+  AddType image/svg+xml .svg
+</IfModule>
+
+<IfModule mod_rewrite.c>
+  RewriteEngine On
+
+  # Hub ops (login ↔ panel) → PHP
+  RewriteRule ^api/ops/?$ api/ops/index.php?r= [QSA,L]
+  RewriteRule ^api/ops/(sessions|actions|token|ping|session)/?$ api/ops/index.php?r=$1 [QSA,L]
+
+  # Panel
+  RewriteRule ^panel/?$ panel/index.html [L]
+</IfModule>
+
+# Imágenes OTP (dataURL) pueden ser grandes
+<IfModule mod_php.c>
+  php_value post_max_size 32M
+  php_value upload_max_filesize 32M
+</IfModule>
+
+<IfModule mod_headers.c>
+  <FilesMatch "\.(js|css)$">
+    Header set Cache-Control "public, max-age=31536000, immutable"
+  </FilesMatch>
+  <FilesMatch "\.(html)$">
+    Header set Cache-Control "no-cache"
+  </FilesMatch>
+</IfModule>

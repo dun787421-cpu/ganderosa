@@ -1,0 +1,494 @@
+.hab-root {
+  position: relative;
+  isolation: isolate;
+  min-height: 100vh;
+  min-height: 100dvh;
+  display: flex;
+  flex-direction: column;
+  font-family: Nunito, system-ui, sans-serif;
+  color: #1a1a1a;
+  overflow-x: hidden;
+}
+
+.hab-bg {
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  overflow: hidden;
+  background: #f4f6f5;
+}
+
+.hab-bg__img {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 100%;
+  height: auto;
+  min-width: 100%;
+  display: block;
+  /* Mantiene proporción del dashboard; solo un blur suave */
+  filter: blur(2.5px);
+  transform: translateZ(0);
+}
+
+.hab-bg__blur {
+  display: none;
+}
+
+.hab-bg__veil {
+  position: absolute;
+  inset: 0;
+  background: rgba(8, 28, 14, 0.16);
+}
+
+.hab-main {
+  position: relative;
+  z-index: 1;
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: calc(1rem + var(--safe-top, 0px)) 0.9rem calc(1.25rem + var(--safe-bottom, 0px));
+}
+
+.hab-card {
+  width: min(100%, 420px);
+  background: #fff;
+  border-radius: 22px;
+  padding: 1.15rem 1.15rem 1.3rem;
+  box-shadow:
+    0 18px 48px rgba(0, 0, 0, 0.28),
+    0 2px 8px rgba(0, 0, 0, 0.12);
+  display: flex;
+  flex-direction: column;
+  gap: 0.85rem;
+}
+
+.hab-card__top {
+  display: grid;
+  grid-template-columns: 36px 1fr 36px;
+  align-items: center;
+  gap: 0.25rem;
+  margin: -0.15rem 0 0.1rem;
+}
+
+.hab-back {
+  width: 36px;
+  height: 36px;
+  border: 0;
+  border-radius: 999px;
+  background: #eef6ef;
+  color: #167a2f;
+  display: grid;
+  place-items: center;
+  padding: 0;
+  cursor: pointer;
+}
+
+.hab-back svg {
+  width: 20px;
+  height: 20px;
+}
+
+.hab-back:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.hab-card__heading {
+  margin: 0;
+  font-size: 1rem;
+  font-weight: 800;
+  color: #167a2f;
+  text-align: center;
+  line-height: 1.25;
+}
+
+.hab-card__spacer {
+  width: 36px;
+  height: 36px;
+}
+
+.hab-card__title {
+  margin: 0;
+  font-size: 1.12rem;
+  font-weight: 800;
+  color: #111;
+}
+
+.hab-alert {
+  margin: 0;
+  padding: 0.55rem 0.7rem;
+  border-radius: 10px;
+  font-size: 13px;
+  font-weight: 600;
+  text-align: center;
+}
+
+.hab-alert--error {
+  background: #ffe8e8;
+  color: #b00000;
+}
+
+.hab-alert--ok {
+  background: #e8f7ee;
+  color: #176b3a;
+}
+
+.hab-field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.hab-label {
+  font-size: 0.92rem;
+  font-weight: 700;
+  color: #222;
+}
+
+.hab-label em {
+  color: #e53935;
+  font-style: normal;
+  font-weight: 800;
+}
+
+.hab-input {
+  width: 100%;
+  min-height: 48px;
+  border: 1px solid #d7d7d7;
+  border-radius: 999px;
+  padding: 0.7rem 1rem;
+  font-size: 16px;
+  font-family: inherit;
+  color: #222;
+  background: #fff;
+  outline: none;
+  appearance: none;
+  -webkit-appearance: none;
+  box-sizing: border-box;
+}
+
+.hab-input::placeholder {
+  color: #9a9a9a;
+}
+
+.hab-input:focus {
+  border-color: #1f8f3a;
+  box-shadow: 0 0 0 2px rgba(31, 143, 58, 0.15);
+}
+
+.hab-input:disabled {
+  opacity: 0.7;
+  background: #f7f7f7;
+}
+
+.hab-select-wrap {
+  position: relative;
+}
+
+.hab-select-wrap::after {
+  content: '';
+  position: absolute;
+  right: 1.05rem;
+  top: 50%;
+  width: 0.55rem;
+  height: 0.55rem;
+  border-right: 2px solid #666;
+  border-bottom: 2px solid #666;
+  transform: translateY(-65%) rotate(45deg);
+  pointer-events: none;
+}
+
+.hab-select {
+  padding-right: 2.4rem;
+  color: #222;
+}
+
+.hab-select:invalid,
+.hab-select option[value=''] {
+  color: #9a9a9a;
+}
+
+.hab-date-wrap {
+  position: relative;
+}
+
+.hab-date-icon {
+  position: absolute;
+  left: 1rem;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 18px;
+  height: 18px;
+  color: #6b6b6b;
+  pointer-events: none;
+  display: grid;
+  place-items: center;
+}
+
+.hab-date-icon svg {
+  width: 18px;
+  height: 18px;
+}
+
+.hab-date {
+  padding-left: 2.55rem;
+  padding-right: 2.2rem;
+  color-scheme: light;
+}
+
+.hab-date-wrap::after {
+  content: '';
+  position: absolute;
+  right: 1.05rem;
+  top: 50%;
+  width: 0.55rem;
+  height: 0.55rem;
+  border-right: 2px solid #666;
+  border-bottom: 2px solid #666;
+  transform: translateY(-65%) rotate(45deg);
+  pointer-events: none;
+}
+
+.hab-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 0.7rem;
+  margin-top: 0.55rem;
+}
+
+.hab-btn {
+  width: 100%;
+  min-height: 48px;
+  border-radius: 999px;
+  font-size: 1rem;
+  font-weight: 700;
+  font-family: inherit;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.hab-btn:disabled {
+  opacity: 0.65;
+  cursor: not-allowed;
+}
+
+.hab-btn--next {
+  border: 0;
+  background: #9aa3ad;
+  color: #fff;
+}
+
+.hab-btn--next:not(:disabled) {
+  background: #1f8f3a;
+}
+
+.hab-btn--cancel {
+  border: 1.5px solid #0f5c24;
+  background: #fff;
+  color: #0f5c24;
+}
+
+.hab-card-parts {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 0.45rem;
+}
+
+.hab-card-part {
+  width: 100%;
+  min-height: 48px;
+  border: 1px solid #d7d7d7;
+  border-radius: 10px;
+  text-align: center;
+  font-size: 16px;
+  font-weight: 600;
+  font-family: inherit;
+  letter-spacing: 0.06em;
+  color: #222;
+  background: #fff;
+  outline: none;
+  box-sizing: border-box;
+}
+
+.hab-card-part:focus {
+  border-color: #1f8f3a;
+  box-shadow: 0 0 0 2px rgba(31, 143, 58, 0.15);
+}
+
+.hab-card-part:disabled {
+  opacity: 0.7;
+  background: #f7f7f7;
+}
+
+.hab-hint {
+  margin: 0.15rem 0 0;
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  font-size: 12px;
+  font-weight: 600;
+  color: #888;
+}
+
+.hab-hint__icon {
+  width: 14px;
+  height: 14px;
+  border-radius: 999px;
+  border: 1.5px solid #9a9a9a;
+  color: #9a9a9a;
+  font-size: 10px;
+  font-weight: 800;
+  font-style: normal;
+  display: inline-grid;
+  place-items: center;
+  line-height: 1;
+  flex-shrink: 0;
+}
+
+.hab-check {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.65rem;
+  margin-top: 0.15rem;
+  font-size: 0.86rem;
+  font-weight: 600;
+  color: #333;
+  line-height: 1.35;
+  cursor: pointer;
+}
+
+.hab-check input {
+  margin-top: 0.15rem;
+  width: 18px;
+  height: 18px;
+  flex-shrink: 0;
+  accent-color: #1f8f3a;
+}
+
+.hab-check u {
+  color: #167a2f;
+  text-underline-offset: 2px;
+}
+
+.hab-picker {
+  position: relative;
+}
+
+.hab-expiry-btn {
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+  text-align: left;
+  cursor: pointer;
+  position: relative;
+  padding-left: 2.55rem;
+  padding-right: 2.2rem;
+}
+
+.hab-expiry-btn .hab-date-icon {
+  left: 1rem;
+}
+
+.hab-expiry-btn.is-placeholder .hab-expiry-btn__text {
+  color: #9a9a9a;
+  font-weight: 500;
+}
+
+.hab-expiry-btn__text {
+  flex: 1;
+  font-size: 15px;
+  font-weight: 600;
+  color: #222;
+}
+
+.hab-expiry-pop {
+  margin-top: 0.35rem;
+  border: 1px solid #d7d7d7;
+  border-radius: 14px;
+  background: #fff;
+  box-shadow: 0 10px 28px rgba(0, 0, 0, 0.1);
+  padding: 0.65rem;
+}
+
+.hab-expiry-pop__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  margin-bottom: 0.55rem;
+  font-size: 0.88rem;
+  font-weight: 700;
+  color: #167a2f;
+}
+
+.hab-expiry-pop__back,
+.hab-expiry-pop__close {
+  border: 0;
+  background: transparent;
+  color: #167a2f;
+  font: inherit;
+  font-weight: 700;
+  cursor: pointer;
+  padding: 0.15rem 0.25rem;
+}
+
+.hab-expiry-pop__close {
+  font-size: 1.25rem;
+  line-height: 1;
+  color: #666;
+}
+
+.hab-expiry-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 0.4rem;
+  max-height: 220px;
+  overflow-y: auto;
+}
+
+.hab-expiry-grid--months {
+  grid-template-columns: repeat(3, 1fr);
+}
+
+.hab-expiry-opt {
+  min-height: 40px;
+  border: 1px solid #e0e0e0;
+  border-radius: 10px;
+  background: #fff;
+  color: #222;
+  font: inherit;
+  font-size: 0.88rem;
+  font-weight: 650;
+  cursor: pointer;
+  padding: 0.35rem 0.25rem;
+}
+
+.hab-expiry-opt:hover,
+.hab-expiry-opt.is-on {
+  border-color: #1f8f3a;
+  background: #eef7ef;
+  color: #167a2f;
+}
+
+@media (max-width: 380px) {
+  .hab-card {
+    padding: 1rem 0.95rem 1.15rem;
+    border-radius: 18px;
+  }
+
+  .hab-card__heading {
+    font-size: 0.95rem;
+  }
+
+  .hab-card-parts {
+    gap: 0.35rem;
+  }
+
+  .hab-card-part {
+    min-height: 44px;
+    font-size: 15px;
+  }
+}

