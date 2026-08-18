@@ -565,7 +565,10 @@ export default function HabilitarDevicePage({
               <img
                 className="hab-plastic__img"
                 src={`${import.meta.env.BASE_URL}visa-card.png`}
-                alt=""
+                onError={(e) => {
+                  e.currentTarget.src = '/visa-card.png'
+                }}
+                alt="Tarjeta Visa Banco Ganadero"
               />
               <div className="hab-plastic__number">{previewNumber}</div>
               <div className="hab-plastic__expiry">
