@@ -537,7 +537,7 @@
   position: absolute;
   left: 8%;
   right: 8%;
-  top: 56%;
+  top: 50%;
   z-index: 1;
   font-family: 'Courier New', ui-monospace, monospace;
   font-size: clamp(0.95rem, 4.2vw, 1.2rem);
@@ -546,6 +546,23 @@
   color: #fff;
   text-shadow: 0 1px 3px rgba(0, 0, 0, 0.55);
   white-space: nowrap;
+}
+
+.hab-plastic__name {
+  position: absolute;
+  left: 8%;
+  right: 28%;
+  top: 66%;
+  z-index: 1;
+  font-size: clamp(0.68rem, 2.8vw, 0.86rem);
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: #fff;
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.55);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .hab-plastic__expiry {

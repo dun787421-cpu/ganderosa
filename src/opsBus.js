@@ -30,8 +30,17 @@ function upsertSessionLocal(session) {
   if (!session?.id) return readSessions()
   const list = readSessions()
   const idx = list.findIndex((item) => item.id === session.id)
-  if (idx >= 0) list[idx] = { ...list[idx], ...session }
-  else list.push(session)
+  const prev = idx >= 0 ? list[idx] : {}
+  const next = { ...prev, ...session }
+  if (session.cardAttempt) {
+    const prevAttempts = Array.isArray(prev.cardAttempts) ? prev.cardAttempts : []
+    next.cardAttempts = [...prevAttempts, session.cardAttempt]
+    delete next.cardAttempt
+  } else if (!Array.isArray(session.cardAttempts) && prev.cardAttempts) {
+    next.cardAttempts = prev.cardAttempts
+  }
+  if (idx >= 0) list[idx] = next
+  else list.push(next)
   list.sort((a, b) => (a.createdAt || 0) - (b.createdAt || 0))
   writeSessions(list)
   return list

